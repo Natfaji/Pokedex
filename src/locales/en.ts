@@ -1,7 +1,7 @@
 const en = {
   appName: 'Pokedex',
-  browseDescription: 'Explore Pokemon by name or type.',
-  searchPlaceholder: 'Search by name or type',
+  browseDescription: 'Explore, Compare and Share Pokemon.',
+  searchPlaceholder: 'Search by name',
   search: 'Search',
   home: 'Home',
   favorites: 'Favorites',
@@ -15,6 +15,7 @@ const en = {
   tryAgain: 'Try again',
   noResults: 'No Pokemon matched your search.',
   searchResults: 'Search results',
+  seeAll: 'See all results',
   abilities: 'Abilities',
   stats: 'Base stats',
   evolutions: 'Evolution chain',
@@ -26,6 +27,12 @@ const en = {
   dutch: 'Nederlands',
   docs: 'Docs',
   back: 'Back',
+  compare: 'Compare',
+  share: 'Share',
+  choosePokemon: 'Choose a second Pokemon',
+  compareTitle: 'Compare Pokemon',
+  selectPokemon: 'Select Pokemon',
+  stronger: 'Stronger',
 } as const;
 
 export default en;

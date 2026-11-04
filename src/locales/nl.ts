@@ -1,7 +1,7 @@
 const nl = {
   appName: 'Pokedex',
-  browseDescription: 'Ontdek Pokemon op naam of type.',
-  searchPlaceholder: 'Zoek op naam of type',
+  browseDescription: 'Ontdek, vergelijk en deel Pokemon.',
+  searchPlaceholder: 'Zoek op naam',
   search: 'Zoeken',
   home: 'Home',
   favorites: 'Favorieten',
@@ -15,6 +15,7 @@ const nl = {
   tryAgain: 'Opnieuw proberen',
   noResults: 'Geen Pokemon gevonden voor deze zoekopdracht.',
   searchResults: 'Zoekresultaten',
+  seeAll: 'Alle resultaten bekijken',
   abilities: 'Vaardigheden',
   stats: 'Basisstats',
   evolutions: 'Evolutieketen',
@@ -26,6 +27,12 @@ const nl = {
   dutch: 'Nederlands',
   docs: 'Documentatie',
   back: 'Terug',
+  compare: 'Vergelijken',
+  share: 'Delen',
+  choosePokemon: 'Kies een tweede Pokémon',
+  compareTitle: 'Pokémon vergelijken',
+  selectPokemon: 'Kies Pokémon',
+  stronger: 'Sterker',
 } as const;
 
 export default nl;

@@ -9,31 +9,31 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: '#172033',
+    background: '#F5F7FB',
+    backgroundElement: '#FFFFFF',
+    backgroundSelected: '#E8EEF8',
+    textSecondary: '#526174',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: '#F8FAFC',
+    background: '#0F172A',
+    backgroundElement: '#1E293B',
+    backgroundSelected: '#334155',
+    textSecondary: '#CBD5E1',
   },
 } as const;
 
 export const Palette = {
-  accent: '#e25555',
-  accentDark: '#171a21',
-  border: '#c7ccd5',
-  barTrack: '#e3e6eb',
-  blue: '#3c9ffe',
-  blueDark: '#0274df',
-  link: '#3c87f7',
-  muted: '#9aa1ad',
-  placeholder: '#7b8494',
+  accent: '#2563EB',
+  accentDark: '#1D4ED8',
+  border: '#CBD5E1',
+  barTrack: '#E2E8F0',
+  blue: '#3B82F6',
+  blueDark: '#1D4ED8',
+  link: '#1D4ED8',
+  muted: '#64748B',
+  placeholder: '#64748B',
   white: '#ffffff',
 } as const;
 

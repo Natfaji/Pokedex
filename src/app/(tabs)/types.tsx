@@ -1,5 +1,4 @@
 import { useRouter, type Href } from "expo-router";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,33 +7,13 @@ import { PokemonTypeCard } from "@/components/pokemon-type-card";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Palette, Spacing } from "@/constants/theme";
-import { getPokemonTypes, type PokemonTypeSummary } from "@/lib/pokeapi";
+import { usePokemonTypes } from "@/lib/queries";
 
 export default function TypesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const [types, setTypes] = useState<PokemonTypeSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    getPokemonTypes()
-      .then((result) => {
-        if (active) setTypes(result);
-      })
-      .catch(() => {
-        if (active) setError(true);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  const { data: types = [], isLoading: loading, isError: error } = usePokemonTypes();
 
   return (
     <ThemedView style={styles.screen}>

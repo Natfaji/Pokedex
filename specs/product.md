@@ -29,6 +29,12 @@ The first version of this application will include:
 - A responsive design.
 - Localization (i18n) with Dutch and English in the first version.
 
+## Technical choices
+
+- **Persistent data:** favorites are stored in SQLite so they remain available after an app restart. The alternative was AsyncStorage, but SQLite gives the saved collection a structured schema.
+- **Native feature:** the detail screen uses the React Native share sheet. The alternative was haptics, but sharing a Pokemon is more useful to this app's users and works on both mobile platforms.
+- **Server state:** TanStack Query caches PokeAPI responses and loads the list in pages of 24. The alternative was manual effects and component state, but query caching avoids duplicate requests while navigating.
+
 ## Out of scope for the first version
 
 - Advanced filtering and sorting options.

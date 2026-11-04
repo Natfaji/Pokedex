@@ -1,56 +1,55 @@
-import { useRouter, type Href } from "expo-router";
-import { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { PokemonCard } from "@/components/pokemon-card";
-import { SearchBar } from "@/components/search-bar";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import PokemonCard from "@/components/pokemon-card";
+import { SearchBarWithResults } from "@/components/search-bar-with-results";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Palette, Spacing } from "@/constants/theme";
 import { useApp } from "@/lib/app-provider";
-import { getPokemonList, type PokemonSummary } from "@/lib/pokeapi";
+import { usePokemonList } from "@/lib/queries";
+import { useIsFetching } from "@tanstack/react-query";
 
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { language, setLanguage } = useApp();
   const { t } = useTranslation();
-  const [pokemon, setPokemon] = useState<PokemonSummary[]>([]);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const isFetching = useIsFetching();
+  const { isFavorite, toggleFavorite } = useApp();
 
-  useEffect(() => {
-    let active = true;
-    getPokemonList()
-      .then((result) => {
-        if (active) setPokemon(result);
-      })
-      .catch(() => {
-        if (active) setError(true);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const {
+    data,
+    isLoading,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = usePokemonList();
+  const pokemon = data?.pages.flatMap((page) => page.pokemon) ?? [];
 
   const submitSearch = () => {
     const trimmedQuery = query.trim();
-    if (trimmedQuery) {
-      router.push(`/search?query=${encodeURIComponent(trimmedQuery)}` as Href);
+    if (trimmedQuery.length >= 3) {
+      router.push({
+        pathname: "/search",
+        params: { query: trimmedQuery },
+      });
     }
   };
+
+  const { width } = useWindowDimensions();
+  const NUM_COLUMNS = width >= 1200 ? 4 : width >= 768 ? 3 : 2;
 
   return (
     <ThemedView style={styles.screen}>
@@ -58,10 +57,11 @@ export default function HomeScreen() {
         contentContainerStyle={[
           styles.content,
           { paddingTop: insets.top + Spacing.four },
+          { paddingBottom: insets.bottom + Spacing.six },
         ]}
         data={pokemon}
-        keyExtractor={(item) => item.name}
-        numColumns={2}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={NUM_COLUMNS}
         columnWrapperStyle={styles.row}
         ListHeaderComponent={
           <View style={styles.header}>
@@ -69,47 +69,21 @@ export default function HomeScreen() {
             <ThemedText themeColor="textSecondary">
               {t("browseDescription")}
             </ThemedText>
-            <View style={styles.languageRow}>
-              <ThemedText type="smallBold">{t("language")}</ThemedText>
-              <View style={styles.languageOptions}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: language === "en" }}
-                  onPress={() => setLanguage("en")}
-                  style={[
-                    styles.languageButton,
-                    language === "en" && styles.selectedLanguage,
-                  ]}
-                >
-                  <ThemedText
-                    style={language === "en" && styles.selectedLanguageText}
-                  >
-                    {t("english")}
-                  </ThemedText>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: language === "nl" }}
-                  onPress={() => setLanguage("nl")}
-                  style={[
-                    styles.languageButton,
-                    language === "nl" && styles.selectedLanguage,
-                  ]}
-                >
-                  <ThemedText
-                    style={language === "nl" && styles.selectedLanguageText}
-                  >
-                    {t("dutch")}
-                  </ThemedText>
-                </Pressable>
-              </View>
-            </View>
-            <SearchBar
+            <LanguageSwitcher />
+            <SearchBarWithResults
               value={query}
               onChangeText={setQuery}
               onSubmit={submitSearch}
+              onSelect={(name) =>
+                router.push({
+                  pathname: "/pokemon/[name]",
+                  params: { name },
+                })
+              }
               placeholder={t("searchPlaceholder")}
               submitLabel={t("search")}
+              seeAllLabel={t("seeAll")}
+              onSeeAll={submitSearch}
             />
             <ThemedText type="subtitle">{t("home")}</ThemedText>
           </View>
@@ -117,11 +91,24 @@ export default function HomeScreen() {
         renderItem={({ item }) => (
           <PokemonCard
             pokemon={item}
-            onPress={() => router.push(`/pokemon/${item.name}` as Href)}
+            favorite={isFavorite(item.name)}
+            onToggleFavorite={() => toggleFavorite(item)}
+            onPress={() =>
+              router.push({
+                pathname: "/pokemon/[name]",
+                params: { name: item.name },
+              })
+            }
           />
         )}
+        onEndReached={() => {
+          if (hasNextPage && !isFetching) {
+            void fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.5}
         ListEmptyComponent={
-          loading ? (
+          isLoading ? (
             <View style={styles.state}>
               <ActivityIndicator
                 accessibilityLabel={t("loading")}
@@ -129,10 +116,18 @@ export default function HomeScreen() {
               />
               <ThemedText themeColor="textSecondary">{t("loading")}</ThemedText>
             </View>
-          ) : error ? (
+          ) : isError ? (
             <View style={styles.state}>
               <ThemedText>{t("error")}</ThemedText>
             </View>
+          ) : null
+        }
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <ActivityIndicator
+              accessibilityLabel={t("loading")}
+              color={Palette.accent}
+            />
           ) : null
         }
       />
@@ -144,35 +139,10 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: {
     paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.six,
   },
   header: {
     gap: Spacing.three,
     paddingBottom: Spacing.four,
-  },
-  languageRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  languageOptions: {
-    flexDirection: "row",
-    gap: Spacing.two,
-  },
-  languageButton: {
-    borderRadius: 8,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.one,
-    borderWidth: 1,
-    borderColor: Palette.border,
-  },
-  selectedLanguage: {
-    backgroundColor: Palette.accent,
-    borderColor: Palette.accent,
-  },
-  selectedLanguageText: {
-    color: Palette.white,
-    fontWeight: "700",
   },
   row: {
     gap: Spacing.three,

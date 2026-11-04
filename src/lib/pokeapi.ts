@@ -15,6 +15,16 @@ export type PokemonSummary = {
   types: PokemonType[];
 };
 
+export type PokemonNameResult = {
+  name: string;
+  url: string;
+};
+
+const POKEMON_INDEX_CACHE_TIME = 24 * 60 * 60 * 1000;
+let pokemonIndexCache: PokemonNameResult[] | null = null;
+let pokemonIndexFetchedAt = 0;
+let pokemonIndexRequest: Promise<PokemonNameResult[]> | null = null;
+
 export type PokemonStat = {
   name: string;
   value: number;
@@ -26,12 +36,19 @@ export type PokemonDetails = PokemonSummary & {
   evolutions: PokemonSummary[];
 };
 
+export type PokemonListPage = {
+  pokemon: PokemonSummary[];
+  nextOffset: number | null;
+};
+
 type NamedApiResource = {
   name: string;
   url: string;
 };
 
 type PokemonListResponse = {
+  count: number;
+  next: string | null;
   results: NamedApiResource[];
 };
 
@@ -100,6 +117,20 @@ function getImageUrl(id: number, sprites: PokemonApiResponse['sprites']) {
   );
 }
 
+function getResourceId(resource: NamedApiResource) {
+  return getIdFromUrl(resource.url);
+}
+
+function toSummaryResource(resource: NamedApiResource): PokemonSummary {
+  const id = getResourceId(resource);
+  return {
+    id,
+    name: resource.name,
+    image: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`,
+    types: [],
+  };
+}
+
 function toSummary(pokemon: PokemonApiResponse): PokemonSummary {
   return {
     id: pokemon.id,
@@ -119,7 +150,20 @@ function flattenEvolutionChain(node: EvolutionNode): string[] {
 
 export async function getPokemonList(limit = 24, offset = 0): Promise<PokemonSummary[]> {
   const list = await request<PokemonListResponse>(`/pokemon?limit=${limit}&offset=${offset}`);
-  return Promise.all(list.results.map(getSummary));
+  return list.results.map(toSummaryResource);
+}
+
+export async function getPokemonListPage(
+  limit = 24,
+  offset = 0,
+): Promise<PokemonListPage> {
+  const list = await request<PokemonListResponse>(
+    `/pokemon?limit=${limit}&offset=${offset}`,
+  );
+  return {
+    pokemon: list.results.map(toSummaryResource),
+    nextOffset: list.next ? offset + limit : null,
+  };
 }
 
 export async function getPokemonTypes(): Promise<PokemonTypeSummary[]> {
@@ -131,7 +175,7 @@ export async function getPokemonByType(type: string): Promise<PokemonSummary[]> 
   const response = await request<PokemonTypeResponse>(
     `/type/${encodeURIComponent(type)}`,
   );
-  return Promise.all(response.pokemon.map(({ pokemon }) => getSummary(pokemon)));
+  return response.pokemon.map(({ pokemon }) => toSummaryResource(pokemon));
 }
 
 export async function searchPokemon(query: string): Promise<PokemonSummary[]> {
@@ -140,26 +184,53 @@ export async function searchPokemon(query: string): Promise<PokemonSummary[]> {
     return getPokemonList();
   }
 
-  const [nameMatches, typeMatches] = await Promise.all([
-    request<PokemonListResponse>('/pokemon?limit=2000').then((list) =>
-      list.results.filter(({ name }) => name.includes(normalizedQuery)).slice(0, 40),
-    ),
-    request<PokemonTypeResponse>(`/type/${encodeURIComponent(normalizedQuery)}`).then(
-      (response) => response.pokemon.map(({ pokemon }) => pokemon).slice(0, 40),
-      () => [],
-    ),
-  ]);
+  const resources = (await getPokemonNameIndex())
+    .filter(({ name }) => name.includes(normalizedQuery))
+    .slice(0, 40);
+  return resources.map(toSummaryResource);
+}
 
-  const resources = [...nameMatches, ...typeMatches].filter(
-    (resource, index, all) => all.findIndex(({ name }) => name === resource.name) === index,
-  );
-  return Promise.all(resources.map(getSummary));
+export async function searchPokemonNames(
+  query: string,
+): Promise<PokemonNameResult[]> {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (normalizedQuery.length < 3) {
+    return [];
+  }
+
+  const list = await getPokemonNameIndex();
+  return list
+    .filter(({ name }) => name.includes(normalizedQuery))
+    .slice(0, 40)
+}
+
+export async function getPokemonNameIndex(): Promise<PokemonNameResult[]> {
+  if (
+    pokemonIndexCache &&
+    Date.now() - pokemonIndexFetchedAt < POKEMON_INDEX_CACHE_TIME
+  ) {
+    return pokemonIndexCache;
+  }
+
+  if (!pokemonIndexRequest) {
+    pokemonIndexRequest = request<PokemonListResponse>('/pokemon?limit=2000')
+      .then((list) => {
+        pokemonIndexCache = list.results.map(({ name, url }) => ({ name, url }));
+        pokemonIndexFetchedAt = Date.now();
+        return pokemonIndexCache;
+      })
+      .finally(() => {
+        pokemonIndexRequest = null;
+      });
+  }
+
+  return pokemonIndexRequest;
 }
 
 export async function getPokemonDetails(name: string): Promise<PokemonDetails> {
   const pokemon = await request<PokemonApiResponse>(`/pokemon/${encodeURIComponent(name)}`);
   const species = await request<{ evolution_chain: NamedApiResource }>(
-    `/pokemon-species/${encodeURIComponent(name)}`,
+    pokemon.species.url.replace(API_BASE_URL, ''),
   );
   const evolutionChain = await request<EvolutionChainResponse>(
     species.evolution_chain.url.replace(API_BASE_URL, ''),

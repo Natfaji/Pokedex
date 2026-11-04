@@ -1,15 +1,15 @@
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { PokemonCard } from "@/components/pokemon-card";
+import PokemonCard from "@/components/pokemon-card";
 import { SearchBar } from "@/components/search-bar";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Palette, Spacing } from "@/constants/theme";
-import { searchPokemon, type PokemonSummary } from "@/lib/pokeapi";
+import { usePokemonSearch } from "@/lib/queries";
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -19,36 +19,7 @@ export default function SearchScreen() {
   const [query, setQuery] = useState(
     typeof queryParam === "string" ? queryParam : "",
   );
-  const [results, setResults] = useState<PokemonSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    const currentQuery = typeof queryParam === "string" ? queryParam : "";
-    if (!currentQuery) {
-      return;
-    }
-    let active = true;
-    void Promise.resolve().then(() => {
-      if (active) {
-        setError(false);
-        setLoading(true);
-      }
-    });
-    searchPokemon(currentQuery)
-      .then((nextResults) => {
-        if (active) setResults(nextResults);
-      })
-      .catch(() => {
-        if (active) setError(true);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [queryParam]);
+  const { data: results = [], isLoading, isError } = usePokemonSearch(query);
 
   const submitSearch = () => {
     const trimmedQuery = query.trim();
@@ -80,7 +51,6 @@ export default function SearchScreen() {
               placeholder={t("searchPlaceholder")}
               submitLabel={t("search")}
             />
-            <ThemedText themeColor="textSecondary">{query}</ThemedText>
           </View>
         }
         renderItem={({ item }) => (
@@ -90,7 +60,7 @@ export default function SearchScreen() {
           />
         )}
         ListEmptyComponent={
-          loading ? (
+          isLoading ? (
             <View style={styles.state}>
               <ActivityIndicator
                 accessibilityLabel={t("loading")}
@@ -98,7 +68,7 @@ export default function SearchScreen() {
               />
               <ThemedText themeColor="textSecondary">{t("loading")}</ThemedText>
             </View>
-          ) : error ? (
+          ) : isError ? (
             <View style={styles.state}>
               <ThemedText>{t("error")}</ThemedText>
             </View>

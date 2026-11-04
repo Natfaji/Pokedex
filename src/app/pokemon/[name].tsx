@@ -1,22 +1,22 @@
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { PokemonCard } from "@/components/pokemon-card";
+import PokemonCard from "@/components/pokemon-card";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Palette, Spacing } from "@/constants/theme";
 import { useApp } from "@/lib/app-provider";
-import { getPokemonDetails, type PokemonDetails } from "@/lib/pokeapi";
+import { usePokemonDetails } from "@/lib/queries";
 
 function formatName(name: string) {
   return name
@@ -31,29 +31,9 @@ export default function PokemonDetailScreen() {
   const name = typeof nameParam === "string" ? nameParam : "";
   const { isFavorite, toggleFavorite } = useApp();
   const { t } = useTranslation();
-  const [pokemon, setPokemon] = useState<PokemonDetails | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const { data: pokemon, isLoading, isError } = usePokemonDetails(name);
 
-  useEffect(() => {
-    if (!name) return;
-    let active = true;
-    getPokemonDetails(name)
-      .then((result) => {
-        if (active) setPokemon(result);
-      })
-      .catch(() => {
-        if (active) setError(true);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [name]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <ThemedView style={styles.state}>
         <ActivityIndicator
@@ -65,7 +45,7 @@ export default function PokemonDetailScreen() {
     );
   }
 
-  if (error || !pokemon) {
+  if (isError || !pokemon) {
     return (
       <ThemedView style={styles.state}>
         <ThemedText>{t("error")}</ThemedText>
@@ -133,6 +113,35 @@ export default function PokemonDetailScreen() {
               {favorite ? t("removeFavorite") : t("addFavorite")}
             </ThemedText>
           </Pressable>
+          <View style={styles.actionRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("compare")}
+              onPress={() =>
+                router.push(`/compare?first=${pokemon.name}` as Href)
+              }
+              style={styles.secondaryButton}
+            >
+              <ThemedText style={styles.secondaryButtonText}>
+                {t("compare")}
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("share")}
+              onPress={() =>
+                void Share.share({
+                  message: `${formatName(pokemon.name)} #${pokemon.id} - ${pokemon.image}`,
+                  title: formatName(pokemon.name),
+                })
+              }
+              style={styles.secondaryButton}
+            >
+              <ThemedText style={styles.secondaryButtonText}>
+                {t("share")}
+              </ThemedText>
+            </Pressable>
+          </View>
         </View>
 
         <DetailSection title={t("abilities")}>
@@ -231,6 +240,21 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.accentDark,
   },
   favoriteText: { color: Palette.white, fontWeight: "700" },
+  actionRow: {
+    flexDirection: "row",
+    gap: Spacing.two,
+  },
+  secondaryButton: {
+    borderRadius: 10,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderWidth: 1,
+    borderColor: Palette.accent,
+  },
+  secondaryButtonText: {
+    color: Palette.accent,
+    fontWeight: "700",
+  },
   button: {
     borderRadius: 10,
     paddingHorizontal: Spacing.three,

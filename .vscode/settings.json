@@ -4,5 +4,18 @@
     "source.organizeImports": "explicit",
     "source.sortMembers": "explicit"
   },
-  "i18n-ally.localesPaths": ["src/locales"]
+  "i18n-ally.localesPaths": ["src/locales"],
+  "i18n-ally.enabledFrameworks": ["react-i18next"],
+  "i18n-ally.enabledParsers": ["ts"],
+  "i18n-ally.sourceLanguage": "en",
+  "i18n-ally.displayLanguage": "nl",
+  "i18n-ally.parsers.typescript.compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "bundler",
+    "customConditions": ["react-native"],
+    "rootDir": ".",
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0"
+  },
+  "i18n-ally.keystyle": "flat"
 }

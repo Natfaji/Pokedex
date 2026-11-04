@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { FlatList, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { PokemonCard } from "@/components/pokemon-card";
+import PokemonCard from "@/components/pokemon-card";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
@@ -35,7 +35,6 @@ export default function FavoritesScreen() {
           <PokemonCard
             pokemon={item}
             favorite={isFavorite(item.name)}
-            favoriteLabel={t("removeFavorite")}
             onToggleFavorite={() => toggleFavorite(item)}
             onPress={() => router.push(`/pokemon/${item.name}` as Href)}
           />

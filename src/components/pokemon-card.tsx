@@ -1,82 +1,98 @@
 import { Image } from "expo-image";
-import { Pressable, StyleSheet, View } from "react-native";
+import {
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  View,
+  ViewStyle,
+} from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Palette, Spacing } from "@/constants/theme";
 import type { PokemonSummary } from "@/lib/pokeapi";
-
-function formatName(name: string) {
-  return name.charAt(0).toUpperCase() + name.slice(1);
-}
+import { useTranslation } from "react-i18next";
 
 type PokemonCardProps = {
   pokemon: PokemonSummary;
   onPress: () => void;
   onToggleFavorite?: () => void;
   favorite?: boolean;
-  favoriteLabel?: string;
+  style?: StyleProp<ViewStyle>;
 };
 
-export function PokemonCard({
+export default function PokemonCard({
   pokemon,
   onPress,
   onToggleFavorite,
   favorite = false,
-  favoriteLabel,
+  style,
 }: PokemonCardProps) {
+  const { t } = useTranslation();
+  const name = formatName(pokemon.name);
+  const types = pokemon.types.map((type) =>
+    t(`types.${type.name}`, { defaultValue: formatName(type.name) }),
+  );
+
+  function formatName(name: string) {
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  }
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={formatName(pokemon.name)}
-      onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-    >
-      <ThemedView type="backgroundElement" style={styles.imageFrame}>
-        <Image
-          source={pokemon.image}
-          contentFit="contain"
-          style={styles.image}
-        />
-      </ThemedView>
-      <ThemedView type="backgroundElement" style={styles.details}>
-        <View style={styles.nameRow}>
-          <ThemedText themeColor="text" type="smallBold" style={styles.name}>
-            {formatName(pokemon.name)}
-          </ThemedText>
-          {onToggleFavorite && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={favoriteLabel}
-              onPress={onToggleFavorite}
-              hitSlop={8}
-            >
-              <ThemedText style={favorite ? styles.favorite : styles.muted}>
-                {favorite ? "★" : "☆"}
+    <ThemedView type="background" style={[styles.card, style]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={formatName(pokemon.name)}
+        onPress={onPress}
+        style={({ pressed }) => pressed && styles.pressed}
+      >
+        <View style={styles.imageFrame}>
+          <Image
+            source={pokemon.image}
+            contentFit="contain"
+            transition={150}
+            style={styles.image}
+          />
+        </View>
+        <View style={styles.details}>
+          <ThemedText type="smallBold">{name}</ThemedText>
+          <View style={styles.types}>
+            {types.map((label) => (
+              <ThemedText key={label} type="small" themeColor="textSecondary">
+                {label}
               </ThemedText>
-            </Pressable>
-          )}
+            ))}
+          </View>
         </View>
-        <View style={styles.types}>
-          {pokemon.types.map((type) => (
-            <ThemedText key={type.name} type="small" themeColor="textSecondary">
-              {formatName(type.name)}
-            </ThemedText>
-          ))}
-        </View>
-      </ThemedView>
-    </Pressable>
+      </Pressable>
+
+      {onToggleFavorite && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t(favorite ? "removeFavorite" : "addFavorite", {
+            name,
+          })}
+          accessibilityState={{ selected: favorite }}
+          onPress={() => onToggleFavorite()}
+          hitSlop={12}
+          style={styles.favoriteButton}
+        >
+          <ThemedText style={favorite ? styles.favorite : styles.muted}>
+            {favorite ? "★" : "☆"}
+          </ThemedText>
+        </Pressable>
+      )}
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    minWidth: 145,
     borderRadius: 12,
     overflow: "hidden",
-    backgroundColor: Palette.white,
     boxShadow: "0px 3px 8px rgba(16, 24, 40, 0.1)",
+    borderWidth: 3,
   },
   pressed: {
     opacity: 0.72,
@@ -92,22 +108,19 @@ const styles = StyleSheet.create({
   },
   details: {
     borderTopWidth: 3,
+    borderTopColor: Palette.border,
     gap: Spacing.one,
     padding: Spacing.three,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing.two,
-  },
-  name: {
-    flexShrink: 1,
   },
   types: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: Spacing.two,
+  },
+  favoriteButton: {
+    position: "absolute",
+    top: Spacing.two,
+    right: Spacing.two,
   },
   favorite: {
     color: Palette.accent,

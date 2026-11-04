@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Palette, Spacing } from "@/constants/theme";
+import { useTheme } from "@/hooks/use-theme";
 
 type SearchBarProps = {
   value: string;
@@ -19,6 +20,8 @@ export function SearchBar({
   placeholder,
   submitLabel,
 }: SearchBarProps) {
+  const theme = useTheme();
+
   return (
     <View style={styles.container}>
       <ThemedView type="backgroundElement" style={styles.inputFrame}>
@@ -30,7 +33,7 @@ export function SearchBar({
           placeholder={placeholder}
           placeholderTextColor={Palette.placeholder}
           returnKeyType="search"
-          style={styles.input}
+          style={[styles.input, { color: theme.text }]}
           value={value}
         />
       </ThemedView>
