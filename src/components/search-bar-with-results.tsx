@@ -5,6 +5,7 @@ import { ThemedText } from "@/components/themed-text";
 import { Palette, Spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 import { usePokemonNameSearch } from "@/lib/queries";
+import { ThemedView } from "./themed-view";
 
 type SearchBarWithResultsProps = {
   value: string;
@@ -13,13 +14,19 @@ type SearchBarWithResultsProps = {
   onSelect: (name: string) => void;
   placeholder: string;
   submitLabel: string;
+  showSubmitButton?: boolean;
+  inlineResults?: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
   seeAllLabel?: string;
   onSeeAll?: () => void;
   showResults?: boolean;
 };
 
 function displayName(name: string) {
-  return name.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return name
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 export function SearchBarWithResults({
@@ -29,12 +36,16 @@ export function SearchBarWithResults({
   onSelect,
   placeholder,
   submitLabel,
+  showSubmitButton = true,
+  inlineResults = false,
+  onFocus,
+  onBlur,
   seeAllLabel,
   onSeeAll,
   showResults = true,
 }: SearchBarWithResultsProps) {
   const theme = useTheme();
-  const searchQuery = usePokemonNameSearch(value);
+  const searchQuery = usePokemonNameSearch(showResults ? value : "");
   const hasResults =
     showResults && value.trim().length >= 3 && searchQuery.data.length > 0;
 
@@ -46,14 +57,17 @@ export function SearchBarWithResults({
         onSubmit={onSubmit}
         placeholder={placeholder}
         submitLabel={submitLabel}
+        showSubmitButton={showSubmitButton}
+        onFocus={onFocus}
+        onBlur={onBlur}
       />
       {hasResults && (
-        <View
+        <ThemedView
+          type="backgroundElement"
           style={[
-            styles.results,
+            inlineResults ? styles.inlineResults : styles.results,
             {
               backgroundColor: theme.backgroundElement,
-              borderColor: theme.backgroundSelected,
               shadowColor: theme.text,
             },
           ]}
@@ -63,7 +77,7 @@ export function SearchBarWithResults({
               key={pokemon.name}
               accessibilityRole="button"
               accessibilityLabel={displayName(pokemon.name)}
-              onPress={() => onSelect(pokemon.name)}
+              onPressIn={() => onSelect(pokemon.name)}
               style={({ pressed }) => [
                 styles.result,
                 { borderBottomColor: theme.backgroundSelected },
@@ -88,7 +102,7 @@ export function SearchBarWithResults({
               <ThemedText style={styles.seeAllText}>{seeAllLabel}</ThemedText>
             </Pressable>
           )}
-        </View>
+        </ThemedView>
       )}
     </View>
   );
@@ -98,6 +112,7 @@ const styles = StyleSheet.create({
   container: {
     position: "relative",
     zIndex: 20,
+    overflow: "visible",
   },
   results: {
     position: "absolute",
@@ -108,10 +123,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     overflow: "hidden",
-    elevation: 8,
+    elevation: 999,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.18,
     shadowRadius: 8,
+  },
+  inlineResults: {
+    borderWidth: 1,
+    borderRadius: 12,
+    overflow: "hidden",
   },
   result: {
     minHeight: 44,

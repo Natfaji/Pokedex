@@ -11,6 +11,9 @@ type SearchBarProps = {
   onSubmit: () => void;
   placeholder: string;
   submitLabel: string;
+  showSubmitButton?: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
 };
 
 export function SearchBar({
@@ -19,6 +22,9 @@ export function SearchBar({
   onSubmit,
   placeholder,
   submitLabel,
+  showSubmitButton = true,
+  onFocus,
+  onBlur,
 }: SearchBarProps) {
   const theme = useTheme();
 
@@ -29,6 +35,8 @@ export function SearchBar({
           accessibilityLabel={placeholder}
           autoCapitalize="none"
           onChangeText={onChangeText}
+          onFocus={onFocus}
+          onBlur={onBlur}
           onSubmitEditing={onSubmit}
           placeholder={placeholder}
           placeholderTextColor={Palette.placeholder}
@@ -37,14 +45,16 @@ export function SearchBar({
           value={value}
         />
       </ThemedView>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={submitLabel}
-        onPress={onSubmit}
-        style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-      >
-        <ThemedText style={styles.buttonText}>{submitLabel}</ThemedText>
-      </Pressable>
+      {showSubmitButton && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={submitLabel}
+          onPress={onSubmit}
+          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+        >
+          <ThemedText style={styles.buttonText}>{submitLabel}</ThemedText>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -59,6 +69,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     justifyContent: "center",
     borderRadius: 10,
+    borderWidth: 3,
   },
   input: {
     color: Palette.accentDark,
