@@ -5,13 +5,29 @@ import { ThemedText } from "@/components/themed-text";
 import { Palette, Spacing } from "@/constants/theme";
 import type { BattleMove } from "@/lib/pokeapi";
 
-export function BattleHeader({ onNewBattle }: { onNewBattle: () => void }) {
+export function BattleHeader({
+  onBack,
+  onNewBattle,
+}: {
+  onBack: () => void;
+  onNewBattle: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <View style={styles.header}>
-      <ThemedText type="subtitle" style={styles.title}>
-        {t("battleFight")}
-      </ThemedText>
+      <View style={styles.titleGroup}>
+        <Pressable
+          onPress={onBack}
+          accessibilityRole="button"
+          accessibilityLabel={t("back")}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
+          <ThemedText style={styles.back}>{`‹ ${t("back")}`}</ThemedText>
+        </Pressable>
+        <ThemedText type="subtitle" style={styles.title}>
+          {t("battleFight")}
+        </ThemedText>
+      </View>
       <Pressable onPress={onNewBattle} accessibilityRole="button">
         <ThemedText style={styles.link}>{t("battleNew")}</ThemedText>
       </Pressable>
@@ -108,8 +124,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  titleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.four,
+  },
   title: { color: Palette.accent },
+  back: { color: Palette.accent, fontWeight: "700" },
   link: { color: Palette.accent, fontWeight: "700" },
+  pressed: { opacity: 0.7 },
   moves: { gap: Spacing.two },
   move: {
     padding: Spacing.three,

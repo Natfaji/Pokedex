@@ -7,16 +7,16 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
 
+import { SearchBarWithResults } from "@/components/search-bar-with-results";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Palette, Spacing } from "@/constants/theme";
 import { getPokemonNameIndex } from "@/lib/pokeapi";
-import { useBattlePokemon, usePokemonNameSearch } from "@/lib/queries";
+import { useBattlePokemon } from "@/lib/queries";
 
 function Picker({
   label,
@@ -34,36 +34,54 @@ function Picker({
   onRandom: () => void;
 }) {
   const { t } = useTranslation();
-  const search = usePokemonNameSearch(value);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const details = useBattlePokemon(selected);
   return (
-    <View style={styles.picker}>
+    <ThemedView
+      type="card"
+      style={[styles.picker, showSearchResults && styles.pickerActive]}
+    >
       <ThemedText type="smallBold">{label}</ThemedText>
-      <TextInput
-        accessibilityLabel={label}
-        placeholder={t("battleSearchPlaceholder")}
-        placeholderTextColor={Palette.placeholder}
-        value={value}
-        onChangeText={onChange}
-        style={styles.input}
-        autoCapitalize="none"
-      />
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t("battleRandom")}
-        onPress={onRandom}
-        style={styles.secondaryButton}
+      <View
+        style={[styles.searchRow, showSearchResults && styles.searchRowActive]}
       >
-        <ThemedText style={styles.secondaryButtonText}>
-          {t("battleRandom")}
-        </ThemedText>
-      </Pressable>
-      {search.isLoading && value.trim().length >= 3 && (
-        <ThemedText themeColor="textSecondary">{t("loading")}</ThemedText>
-      )}
-      {search.isError && (
-        <ThemedText style={styles.error}>{t("error")}</ThemedText>
-      )}
+        <View style={styles.searchControl}>
+          <SearchBarWithResults
+            value={value}
+            onChangeText={(text) => {
+              setShowSearchResults(true);
+              onChange(text);
+            }}
+            onSubmit={() => undefined}
+            onSelect={(name) => {
+              setShowSearchResults(false);
+              onSelect(name);
+              onChange(name);
+            }}
+            placeholder={t("battleSearchPlaceholder")}
+            submitLabel={t("search")}
+            showSubmitButton={false}
+            showResults={showSearchResults}
+            onFocus={() => setShowSearchResults(true)}
+            onBlur={() => {
+              setTimeout(() => setShowSearchResults(false), 100);
+            }}
+          />
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("battleRandom")}
+          onPress={() => {
+            setShowSearchResults(false);
+            onRandom();
+          }}
+          style={styles.secondaryButton}
+        >
+          <ThemedText style={styles.secondaryButtonText}>
+            {t("battleRandom")}
+          </ThemedText>
+        </Pressable>
+      </View>
       {details.isLoading && !!selected && (
         <ThemedText themeColor="textSecondary">{t("battleLoading")}</ThemedText>
       )}
@@ -77,22 +95,8 @@ function Picker({
           </ThemedText>
         </Pressable>
       )}
-      {search.data?.slice(0, 5).map((pokemon) => (
-        <Pressable
-          key={pokemon.name}
-          accessibilityRole="button"
-          accessibilityLabel={pokemon.name}
-          onPress={() => {
-            onSelect(pokemon.name);
-            onChange(pokemon.name);
-          }}
-          style={styles.result}
-        >
-          <ThemedText>{pokemon.name}</ThemedText>
-        </Pressable>
-      ))}
       {!!selected && details.data && (
-        <View style={styles.selected}>
+        <ThemedView type="card" style={styles.selected}>
           <Image
             accessibilityLabel={details.data.name}
             source={{ uri: details.data.image }}
@@ -106,9 +110,9 @@ function Picker({
             {t("battleLevel")} 50 ·{" "}
             {details.data.types.map(({ name }) => name).join(" / ")}
           </ThemedText>
-        </View>
+        </ThemedView>
       )}
-    </View>
+    </ThemedView>
   );
 }
 
@@ -225,15 +229,27 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     padding: Spacing.three,
     borderRadius: 20,
-    backgroundColor: "#E8EEF8",
+    overflow: "visible",
   },
-  input: {
-    borderWidth: 1,
-    borderColor: Palette.border,
-    borderRadius: 12,
-    padding: Spacing.two,
-    backgroundColor: Palette.white,
-    color: "#172033",
+  pickerActive: {
+    zIndex: 100,
+    elevation: 100,
+  },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.two,
+    zIndex: 10,
+    overflow: "visible",
+  },
+  searchRowActive: {
+    zIndex: 100,
+    elevation: 100,
+  },
+  searchControl: {
+    flex: 1,
+    zIndex: 100,
+    elevation: 100,
   },
   secondaryButton: {
     alignSelf: "flex-start",
@@ -243,16 +259,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#D6E4FF",
   },
   secondaryButtonText: { color: Palette.accent, fontWeight: "700" },
-  result: {
-    padding: Spacing.two,
-    borderBottomWidth: 1,
-    borderBottomColor: Palette.border,
-  },
   selected: {
     alignItems: "center",
     padding: Spacing.three,
     borderRadius: 14,
-    backgroundColor: Palette.accent,
   },
   selectedImage: { width: 140, height: 140 },
   selectedName: { color: Palette.white, fontSize: 24, lineHeight: 30 },
