@@ -37,7 +37,7 @@ export default function HistoryScreen() {
           </ThemedText>
         ) : (
           history.data?.map((entry) => (
-            <View key={entry.id} style={styles.entry}>
+            <ThemedView type="card" key={entry.id} style={styles.entry}>
               <View style={styles.pokemon}>
                 <Image
                   source={entry.player.image}
@@ -64,7 +64,7 @@ export default function HistoryScreen() {
                 />
                 <ThemedText type="smallBold">{entry.opponent.name}</ThemedText>
               </View>
-            </View>
+            </ThemedView>
           ))
         )}
       </ScrollView>
@@ -111,7 +111,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: Spacing.three,
     borderRadius: 18,
-    backgroundColor: "#E8EEF8",
   },
   pokemon: { alignItems: "center", gap: Spacing.one, flex: 1 },
   image: { width: 70, height: 70 },

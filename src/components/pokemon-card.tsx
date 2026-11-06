@@ -101,7 +101,7 @@ function PokemonCard({
   }
 
   return (
-    <ThemedView type="background" style={[styles.card, style]}>
+    <ThemedView type="card" style={[styles.card, style]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={name}
@@ -150,7 +150,10 @@ function PokemonCard({
           hitSlop={12}
           style={styles.favoriteButton}
         >
-          <ThemedText style={favorite ? styles.favorite : styles.muted}>
+          <ThemedText
+            themeColor="accentInk"
+            style={favorite ? styles.favorite : styles.muted}
+          >
             {favorite ? "★" : "☆"}
           </ThemedText>
         </Pressable>
@@ -230,11 +233,9 @@ const styles = StyleSheet.create({
     right: Spacing.two,
   },
   favorite: {
-    color: Palette.accent,
     fontSize: 28,
   },
   muted: {
-    color: Palette.muted,
     fontSize: 28,
   },
 });
