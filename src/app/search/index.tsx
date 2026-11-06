@@ -8,7 +8,7 @@ import { SearchBar } from "@/components/search-bar";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
-import { usePokemonSearch } from "@/lib/queries";
+import { usePokemonNameSearch } from "@/lib/queries";
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -17,7 +17,11 @@ export default function SearchScreen() {
   const [query, setQuery] = useState(
     typeof queryParam === "string" ? queryParam : "",
   );
-  const { data: results = [], isLoading, isError } = usePokemonSearch(query);
+  const {
+    data: results = [],
+    isLoading,
+    isError,
+  } = usePokemonNameSearch(query);
 
   const submitSearch = () => {
     const trimmedQuery = query.trim();
