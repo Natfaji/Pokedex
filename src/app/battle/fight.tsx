@@ -202,6 +202,7 @@ export default function BattleFightScreen() {
     <ThemedView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <BattleHeader
+          onBack={() => router.back()}
           onNewBattle={() => router.push({ pathname: "/battle" })}
         />
         <BattleCard
