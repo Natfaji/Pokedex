@@ -1,7 +1,12 @@
+import * as Clipboard from "expo-clipboard";
+import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
+  Alert,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -13,7 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import PokemonCard from "@/components/pokemon-card";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Palette, Spacing } from "@/constants/theme";
+import { getPokemonTypeColor, Palette, Spacing } from "@/constants/theme";
 import {
   useFavoritesActions,
   useFavoritesState,
@@ -35,6 +40,9 @@ export default function PokemonDetailScreen() {
   const { toggleFavorite } = useFavoritesActions();
   const { favoriteIds } = useFavoritesState();
   const { t } = useTranslation();
+  const [activeSection, setActiveSection] = useState<
+    "about" | "stats" | "evolutions"
+  >("about");
   const { data: pokemon, isLoading, isError } = usePokemonDetails(name);
 
   if (isLoading) {
@@ -65,6 +73,41 @@ export default function PokemonDetailScreen() {
   }
 
   const favorite = favoriteIds.has(pokemon.id);
+  const pokemonUrl = Linking.createURL(`/pokemon/${pokemon.name}`);
+  const copyPokemonLink = async () => {
+    try {
+      await Clipboard.setStringAsync(pokemonUrl);
+      Alert.alert(t("linkCopied"));
+    } catch {
+      Alert.alert(t("copyError"));
+    }
+  };
+  const handleShare = async () => {
+    const canUseWebShare =
+      Platform.OS !== "web" ||
+      (typeof navigator !== "undefined" &&
+        "share" in navigator &&
+        typeof navigator.share === "function");
+
+    if (!canUseWebShare) {
+      await copyPokemonLink();
+      return;
+    }
+
+    try {
+      await Share.share({
+        message: `${formatName(pokemon.name)} #${pokemon.id} - ${pokemonUrl}`,
+        title: formatName(pokemon.name),
+      });
+    } catch {
+      if (Platform.OS === "web") {
+        await copyPokemonLink();
+      } else {
+        Alert.alert(t("shareError"));
+      }
+    }
+  };
+
   return (
     <ThemedView style={styles.screen}>
       <ScrollView
@@ -93,6 +136,7 @@ export default function PokemonDetailScreen() {
                 onPress={() => router.push(`/types/${type.name}` as Href)}
                 style={({ pressed }) => [
                   styles.typePill,
+                  { backgroundColor: getPokemonTypeColor(type.name) },
                   pressed && styles.pressed,
                 ]}
               >
@@ -133,12 +177,7 @@ export default function PokemonDetailScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t("share")}
-              onPress={() =>
-                void Share.share({
-                  message: `${formatName(pokemon.name)} #${pokemon.id} - ${pokemon.image}`,
-                  title: formatName(pokemon.name),
-                })
-              }
+              onPress={() => void handleShare()}
               style={styles.secondaryButton}
             >
               <ThemedText style={styles.secondaryButtonText}>
@@ -148,36 +187,74 @@ export default function PokemonDetailScreen() {
           </View>
         </View>
 
-        <DetailSection title={t("abilities")}>
-          <ThemedText>
-            {pokemon.abilities.map(formatName).join(", ")}
-          </ThemedText>
-        </DetailSection>
-        <DetailSection title={t("stats")}>
-          {pokemon.stats.map((stat) => (
-            <View key={stat.name} style={styles.statRow}>
-              <ThemedText style={styles.statName}>
-                {formatName(stat.name)}
+        <View style={styles.sectionTabs}>
+          {(
+            [
+              ["about", t("about")],
+              ["stats", t("stats")],
+              ["evolutions", t("evolutions")],
+            ] as const
+          ).map(([section, label]) => (
+            <Pressable
+              key={section}
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeSection === section }}
+              onPress={() => setActiveSection(section)}
+              style={[
+                styles.sectionTab,
+                activeSection === section && styles.sectionTabActive,
+              ]}
+            >
+              <ThemedText
+                type="smallBold"
+                style={activeSection === section && styles.sectionTabTextActive}
+              >
+                {label}
               </ThemedText>
-              <ThemedText style={styles.statValue}>{stat.value}</ThemedText>
-              <View style={styles.barTrack}>
-                <View
-                  style={[
-                    styles.bar,
-                    { width: `${Math.min(stat.value, 100)}%` },
-                  ]}
-                />
-              </View>
-            </View>
+            </Pressable>
           ))}
-        </DetailSection>
-        <DetailSection title={t("evolutions")}>
-          <View style={styles.evolutionList}>
-            {pokemon.evolutions.map((evolution) => (
-              <PokemonCard key={evolution.name} pokemon={evolution} />
+        </View>
+        {activeSection === "about" && (
+          <DetailSection title={t("about")}>
+            <ThemedText>{`#${pokemon.id} ${formatName(pokemon.name)}`}</ThemedText>
+            <ThemedText>
+              {t("abilities")}: {pokemon.abilities.map(formatName).join(", ")}
+            </ThemedText>
+            <ThemedText>
+              {t("types")}:{" "}
+              {pokemon.types.map((type) => formatName(type.name)).join(", ")}
+            </ThemedText>
+          </DetailSection>
+        )}
+        {activeSection === "stats" && (
+          <DetailSection title={t("stats")}>
+            {pokemon.stats.map((stat) => (
+              <View key={stat.name} style={styles.statRow}>
+                <ThemedText style={styles.statName}>
+                  {formatName(stat.name)}
+                </ThemedText>
+                <ThemedText style={styles.statValue}>{stat.value}</ThemedText>
+                <View style={styles.barTrack}>
+                  <View
+                    style={[
+                      styles.bar,
+                      { width: `${Math.min(stat.value, 100)}%` },
+                    ]}
+                  />
+                </View>
+              </View>
             ))}
-          </View>
-        </DetailSection>
+          </DetailSection>
+        )}
+        {activeSection === "evolutions" && (
+          <DetailSection title={t("evolutions")}>
+            <View style={styles.evolutionList}>
+              {pokemon.evolutions.map((evolution) => (
+                <PokemonCard key={evolution.name} pokemon={evolution} />
+              ))}
+            </View>
+          </DetailSection>
+        )}
       </ScrollView>
     </ThemedView>
   );
@@ -221,7 +298,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
-    backgroundColor: Palette.accent,
   },
   typePillText: {
     color: Palette.white,
@@ -266,6 +342,24 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.four,
   },
   sectionTitle: { fontSize: 24, lineHeight: 30 },
+  sectionTabs: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: Palette.border,
+    marginHorizontal: Spacing.three,
+  },
+  sectionTab: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: Spacing.two,
+  },
+  sectionTabActive: {
+    borderBottomWidth: 3,
+    borderBottomColor: Palette.accent,
+  },
+  sectionTabTextActive: {
+    color: Palette.accent,
+  },
   statRow: { flexDirection: "row", alignItems: "center", gap: Spacing.two },
   statName: { width: 105 },
   statValue: { width: 32, fontWeight: "700" },
