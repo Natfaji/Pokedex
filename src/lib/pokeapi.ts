@@ -1,4 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 const API_BASE_URL = 'https://pokeapi.co/api/v2';
+const API_CACHE_PREFIX = 'pokedex:api-cache:';
 
 export type PokemonType = {
   name: string;
@@ -128,11 +131,22 @@ export class PokeApiError extends Error {
 }
 
 async function request<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`);
-  if (!response.ok) {
-    throw new PokeApiError(`PokeAPI request failed with status ${response.status}`);
+  const cacheKey = `${API_CACHE_PREFIX}${path}`;
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`);
+    if (!response.ok) {
+      throw new PokeApiError(`PokeAPI request failed with status ${response.status}`);
+    }
+    const data = (await response.json()) as T;
+    await AsyncStorage.setItem(cacheKey, JSON.stringify(data));
+    return data;
+  } catch (error) {
+    const cached = await AsyncStorage.getItem(cacheKey);
+    if (cached) {
+      return JSON.parse(cached) as T;
+    }
+    throw error;
   }
-  return response.json() as Promise<T>;
 }
 
 function getIdFromUrl(url: string) {

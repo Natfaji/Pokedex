@@ -28,7 +28,11 @@ export function BattleHeader({
           {t("battleFight")}
         </ThemedText>
       </View>
-      <Pressable onPress={onNewBattle} accessibilityRole="button">
+      <Pressable
+        onPress={onNewBattle}
+        accessibilityRole="button"
+        accessibilityLabel={t("battleNew")}
+      >
         <ThemedText style={styles.link}>{t("battleNew")}</ThemedText>
       </Pressable>
     </View>
@@ -53,6 +57,7 @@ export function MoveSelector({
           key={`${move.name}-${index}`}
           accessibilityRole="button"
           accessibilityLabel={`${move.name}, ${move.type}`}
+          accessibilityState={{ disabled }}
           disabled={disabled}
           onPress={() => onSelect(index)}
           style={[styles.move, disabled && styles.disabled]}

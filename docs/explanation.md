@@ -72,3 +72,16 @@ implementation. The repository also includes the example record in
 Battle-engine tests are in
 [`tests/battle-engine.test.ts`](../tests/battle-engine.test.ts) and run with
 `npm test`.
+
+## Bonus work
+
+- The PokeAPI response cache in
+  [`src/lib/pokeapi.ts`](../src/lib/pokeapi.ts#L1) stores successful responses
+  in AsyncStorage and uses the last successful response when the API is
+  unavailable.
+- Accessibility labels and disabled states are applied to interactive controls,
+  including search, favorites, language selection, battle moves and retry
+  actions.
+- The repository runs lint, TypeScript, tests and an Expo web export on every
+  push and pull request through
+  [`.github/workflows/quality.yml`](../.github/workflows/quality.yml).

@@ -21,6 +21,7 @@ export function StateView({
           onPress={onAction}
           style={styles.button}
           accessibilityRole="button"
+          accessibilityLabel={action}
         >
           <ThemedText style={styles.buttonText}>{action}</ThemedText>
         </Pressable>
