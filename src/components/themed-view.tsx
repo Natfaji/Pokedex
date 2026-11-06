@@ -7,6 +7,7 @@ export type ThemedViewProps = ViewProps & {
   lightColor?: string;
   darkColor?: string;
   type?: ThemeColor;
+  themeColor?: ThemeColor;
 };
 
 export function ThemedView({
@@ -14,13 +15,26 @@ export function ThemedView({
   lightColor,
   darkColor,
   type = "background",
+  themeColor,
   ...otherProps
 }: ThemedViewProps) {
   const theme = useTheme();
   const scheme = useColorScheme() ?? "light";
 
   const override = scheme === "dark" ? darkColor : lightColor;
-  const backgroundColor = override ?? theme[type];
+  const backgroundColor = override ?? theme[themeColor ?? type];
+  const borderColor = theme.border;
 
-  return <View style={[{ backgroundColor }, style]} {...otherProps} />;
+  return (
+    <View
+      style={[
+        {
+          backgroundColor: backgroundColor,
+          borderColor,
+        },
+        style,
+      ]}
+      {...otherProps}
+    />
+  );
 }
