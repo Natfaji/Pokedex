@@ -13,7 +13,11 @@ export default function TypesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { data: types = [], isLoading: loading, isError: error } = usePokemonTypes();
+  const {
+    data: types = [],
+    isLoading: loading,
+    isError: error,
+  } = usePokemonTypes();
 
   return (
     <ThemedView style={styles.screen}>

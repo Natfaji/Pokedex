@@ -1,71 +1,41 @@
-import { useRouter, type Href } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { FlatList, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StyleSheet } from "react-native";
 
-import PokemonCard from "@/components/pokemon-card";
+import PokemonList from "@/components/pokemon-list";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
-import { useApp } from "@/lib/app-provider";
+import {
+  useFavoritesActions,
+  useFavoritesState,
+} from "@/lib/favorites-provider";
 
 export default function FavoritesScreen() {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { favorites, isFavorite, toggleFavorite } = useApp();
+  const { favorites, favoriteIds, error } = useFavoritesState();
+  const { toggleFavorite } = useFavoritesActions();
   const { t } = useTranslation();
 
   return (
     <ThemedView style={styles.screen}>
-      <FlatList
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: insets.top + Spacing.four },
-        ]}
+      <PokemonList
         data={favorites}
-        keyExtractor={(item) => item.name}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        ListHeaderComponent={
+        header={
           <ThemedText type="subtitle" style={styles.title}>
             {t("favorites")}
           </ThemedText>
         }
-        renderItem={({ item }) => (
-          <PokemonCard
-            pokemon={item}
-            favorite={isFavorite(item.name)}
-            onToggleFavorite={() => toggleFavorite(item)}
-            onPress={() => router.push(`/pokemon/${item.name}` as Href)}
-          />
-        )}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <ThemedText themeColor="textSecondary">
-              {t("noFavorites")}
-            </ThemedText>
-          </View>
-        }
+        favoriteIds={favoriteIds}
+        onToggleFavorite={toggleFavorite}
+        emptyMessage={t("noFavorites")}
       />
+      {error && <ThemedText>{error}</ThemedText>}
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: {
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.six,
-  },
   title: {
     marginBottom: Spacing.four,
-  },
-  row: {
-    gap: Spacing.three,
-    marginBottom: Spacing.three,
-  },
-  empty: {
-    alignItems: "center",
-    paddingVertical: Spacing.six,
   },
 });

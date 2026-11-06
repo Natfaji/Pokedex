@@ -1,4 +1,4 @@
-import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import {
   Pressable,
   StyleProp,
@@ -11,28 +11,90 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Palette, Spacing } from "@/constants/theme";
 import type { PokemonSummary } from "@/lib/pokeapi";
+import { Image } from "expo-image";
+import React from "react";
 import { useTranslation } from "react-i18next";
+import Animated, {
+  cancelAnimation,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 
 type PokemonCardProps = {
-  pokemon: PokemonSummary;
-  onPress: () => void;
-  onToggleFavorite?: () => void;
+  pokemon?: PokemonSummary;
+  isLoading?: boolean;
+  onToggleFavorite?: (pokemon: PokemonSummary) => void;
   favorite?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
-export default function PokemonCard({
+export function PokemonCardSkeleton({
+  style,
+}: {
+  style?: StyleProp<ViewStyle>;
+}) {
+  const sweep = useSharedValue(-1);
+  const sweepStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateX: interpolate(sweep.value, [-1, 1], [-180, 180]),
+      },
+    ],
+  }));
+
+  React.useEffect(() => {
+    // Reanimated shared values are intentionally mutated to start the sweep.
+    // eslint-disable-next-line react-hooks/immutability
+    sweep.value = withRepeat(withTiming(1, { duration: 1200 }), -1, false);
+
+    return () => cancelAnimation(sweep);
+  }, [sweep]);
+
+  return (
+    <ThemedView
+      accessibilityLabel="Loading Pokémon"
+      accessibilityRole="progressbar"
+      style={[styles.card, style]}
+    >
+      <View style={styles.imageFrame}>
+        <View style={styles.skeletonImage}>
+          <Animated.View style={[styles.skeletonSweep, sweepStyle]} />
+        </View>
+      </View>
+      <View style={styles.details}>
+        <View style={styles.skeletonTitle}>
+          <Animated.View style={[styles.skeletonSweep, sweepStyle]} />
+        </View>
+        <View style={styles.skeletonType}>
+          <Animated.View style={[styles.skeletonSweep, sweepStyle]} />
+        </View>
+      </View>
+    </ThemedView>
+  );
+}
+
+function PokemonCard({
   pokemon,
-  onPress,
+  isLoading = false,
   onToggleFavorite,
   favorite = false,
   style,
 }: PokemonCardProps) {
+  const router = useRouter();
   const { t } = useTranslation();
-  const name = formatName(pokemon.name);
-  const types = pokemon.types.map((type) =>
-    t(`types.${type.name}`, { defaultValue: formatName(type.name) }),
-  );
+  const name = pokemon ? formatName(pokemon.name) : "";
+  const types =
+    pokemon?.types.map((type) => ({
+      name: type.name,
+      label: t(`types.${type.name}`, { defaultValue: formatName(type.name) }),
+    })) ?? [];
+
+  if (isLoading || !pokemon) {
+    return <PokemonCardSkeleton style={style} />;
+  }
 
   function formatName(name: string) {
     return name.charAt(0).toUpperCase() + name.slice(1);
@@ -42,23 +104,27 @@ export default function PokemonCard({
     <ThemedView type="background" style={[styles.card, style]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={formatName(pokemon.name)}
-        onPress={onPress}
+        accessibilityLabel={name}
+        onPress={() =>
+          router.push({
+            pathname: "/pokemon/[name]",
+            params: { name: pokemon.name },
+          })
+        }
         style={({ pressed }) => pressed && styles.pressed}
       >
         <View style={styles.imageFrame}>
           <Image
             source={pokemon.image}
-            contentFit="contain"
-            transition={150}
+            cachePolicy={"memory-disk"}
             style={styles.image}
           />
         </View>
         <View style={styles.details}>
           <ThemedText type="smallBold">{name}</ThemedText>
           <View style={styles.types}>
-            {types.map((label) => (
-              <ThemedText key={label} type="small" themeColor="textSecondary">
+            {types.map(({ name: typeName, label }) => (
+              <ThemedText key={typeName} type="small" themeColor="textSecondary">
                 {label}
               </ThemedText>
             ))}
@@ -73,7 +139,7 @@ export default function PokemonCard({
             name,
           })}
           accessibilityState={{ selected: favorite }}
-          onPress={() => onToggleFavorite()}
+          onPress={() => onToggleFavorite(pokemon)}
           hitSlop={12}
           style={styles.favoriteButton}
         >
@@ -86,9 +152,10 @@ export default function PokemonCard({
   );
 }
 
+export default React.memo(PokemonCard);
+
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
     borderRadius: 12,
     overflow: "hidden",
     boxShadow: "0px 3px 8px rgba(16, 24, 40, 0.1)",
@@ -105,6 +172,32 @@ const styles = StyleSheet.create({
   image: {
     width: "86%",
     height: "86%",
+  },
+  skeletonImage: {
+    width: "86%",
+    height: "86%",
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: Palette.barTrack,
+  },
+  skeletonTitle: {
+    height: 20,
+    width: "62%",
+    borderRadius: 6,
+    overflow: "hidden",
+    backgroundColor: Palette.barTrack,
+  },
+  skeletonType: {
+    height: 20,
+    width: "42%",
+    borderRadius: 6,
+    overflow: "hidden",
+    backgroundColor: Palette.barTrack,
+  },
+  skeletonSweep: {
+    height: "100%",
+    width: "45%",
+    backgroundColor: "rgba(255, 255, 255, 0.55)",
   },
   details: {
     borderTopWidth: 3,
@@ -124,10 +217,10 @@ const styles = StyleSheet.create({
   },
   favorite: {
     color: Palette.accent,
-    fontSize: 22,
+    fontSize: 28,
   },
   muted: {
     color: Palette.muted,
-    fontSize: 22,
+    fontSize: 28,
   },
 });

@@ -1,12 +1,15 @@
-import { useLocalSearchParams, useRouter, type Href } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StyleSheet, View } from "react-native";
 
-import PokemonCard from "@/components/pokemon-card";
+import PokemonList from "@/components/pokemon-list";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Palette, Spacing } from "@/constants/theme";
+import { Spacing } from "@/constants/theme";
+import {
+  useFavoritesActions,
+  useFavoritesState,
+} from "@/lib/favorites-provider";
 import { usePokemonByType } from "@/lib/queries";
 
 function formatName(name: string) {
@@ -14,29 +17,18 @@ function formatName(name: string) {
 }
 
 export default function PokemonTypeScreen() {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { type: typeParam } = useLocalSearchParams<{ type: string }>();
   const type = typeof typeParam === "string" ? typeParam : "";
   const { t } = useTranslation();
-  const {
-    data: pokemon = [],
-    isLoading: loading,
-    isError: error,
-  } = usePokemonByType(type);
+  const { data: pokemon = [], isLoading, isError } = usePokemonByType(type);
+  const { toggleFavorite } = useFavoritesActions();
+  const { favoriteIds } = useFavoritesState();
 
   return (
     <ThemedView style={styles.screen}>
-      <FlatList
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: insets.top + Spacing.four },
-        ]}
+      <PokemonList
         data={pokemon}
-        keyExtractor={(item) => item.name}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        ListHeaderComponent={
+        header={
           <View style={styles.header}>
             <ThemedText type="subtitle">{formatName(type)}</ThemedText>
             <ThemedText themeColor="textSecondary">
@@ -44,33 +36,10 @@ export default function PokemonTypeScreen() {
             </ThemedText>
           </View>
         }
-        renderItem={({ item }) => (
-          <PokemonCard
-            pokemon={item}
-            onPress={() => router.push(`/pokemon/${item.name}` as Href)}
-          />
-        )}
-        ListEmptyComponent={
-          <View style={styles.state}>
-            {loading ? (
-              <>
-                <ActivityIndicator
-                  accessibilityLabel={t("loading")}
-                  color={Palette.accent}
-                />
-                <ThemedText themeColor="textSecondary">
-                  {t("loading")}
-                </ThemedText>
-              </>
-            ) : error ? (
-              <ThemedText>{t("error")}</ThemedText>
-            ) : (
-              <ThemedText themeColor="textSecondary">
-                {t("noTypePokemon")}
-              </ThemedText>
-            )}
-          </View>
-        }
+        favoriteIds={favoriteIds}
+        onToggleFavorite={toggleFavorite}
+        isLoading={isLoading}
+        isError={isError || !type}
       />
     </ThemedView>
   );
@@ -89,10 +58,5 @@ const styles = StyleSheet.create({
   row: {
     gap: Spacing.three,
     marginBottom: Spacing.three,
-  },
-  state: {
-    alignItems: "center",
-    gap: Spacing.two,
-    paddingVertical: Spacing.six,
   },
 });

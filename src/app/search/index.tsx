@@ -1,19 +1,17 @@
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StyleSheet, View } from "react-native";
 
-import PokemonCard from "@/components/pokemon-card";
+import PokemonList from "@/components/pokemon-list";
 import { SearchBar } from "@/components/search-bar";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Palette, Spacing } from "@/constants/theme";
+import { Spacing } from "@/constants/theme";
 import { usePokemonSearch } from "@/lib/queries";
 
 export default function SearchScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { query: queryParam } = useLocalSearchParams<{ query?: string }>();
   const { t } = useTranslation();
   const [query, setQuery] = useState(
@@ -32,16 +30,9 @@ export default function SearchScreen() {
 
   return (
     <ThemedView style={styles.screen}>
-      <FlatList
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: insets.top + Spacing.four },
-        ]}
+      <PokemonList
         data={results}
-        keyExtractor={(item) => item.name}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        ListHeaderComponent={
+        header={
           <View style={styles.header}>
             <ThemedText type="subtitle">{t("searchResults")}</ThemedText>
             <SearchBar
@@ -53,33 +44,9 @@ export default function SearchScreen() {
             />
           </View>
         }
-        renderItem={({ item }) => (
-          <PokemonCard
-            pokemon={item}
-            onPress={() => router.push(`/pokemon/${item.name}` as Href)}
-          />
-        )}
-        ListEmptyComponent={
-          isLoading ? (
-            <View style={styles.state}>
-              <ActivityIndicator
-                accessibilityLabel={t("loading")}
-                color={Palette.accent}
-              />
-              <ThemedText themeColor="textSecondary">{t("loading")}</ThemedText>
-            </View>
-          ) : isError ? (
-            <View style={styles.state}>
-              <ThemedText>{t("error")}</ThemedText>
-            </View>
-          ) : (
-            <View style={styles.state}>
-              <ThemedText themeColor="textSecondary">
-                {t("noResults")}
-              </ThemedText>
-            </View>
-          )
-        }
+        isLoading={isLoading}
+        isError={isError}
+        emptyMessage={t("noResults")}
       />
     </ThemedView>
   );
@@ -87,21 +54,8 @@ export default function SearchScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: {
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.six,
-  },
   header: {
     gap: Spacing.three,
     paddingBottom: Spacing.four,
-  },
-  row: {
-    gap: Spacing.three,
-    marginBottom: Spacing.three,
-  },
-  state: {
-    alignItems: "center",
-    gap: Spacing.two,
-    paddingVertical: Spacing.six,
   },
 });

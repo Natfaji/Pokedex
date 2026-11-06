@@ -1,4 +1,3 @@
-import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -15,8 +14,12 @@ import PokemonCard from "@/components/pokemon-card";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Palette, Spacing } from "@/constants/theme";
-import { useApp } from "@/lib/app-provider";
+import {
+  useFavoritesActions,
+  useFavoritesState,
+} from "@/lib/favorites-provider";
 import { usePokemonDetails } from "@/lib/queries";
+import { Image } from "expo-image";
 
 function formatName(name: string) {
   return name
@@ -29,7 +32,8 @@ export default function PokemonDetailScreen() {
   const insets = useSafeAreaInsets();
   const { name: nameParam } = useLocalSearchParams<{ name: string }>();
   const name = typeof nameParam === "string" ? nameParam : "";
-  const { isFavorite, toggleFavorite } = useApp();
+  const { toggleFavorite } = useFavoritesActions();
+  const { favoriteIds } = useFavoritesState();
   const { t } = useTranslation();
   const { data: pokemon, isLoading, isError } = usePokemonDetails(name);
 
@@ -60,7 +64,7 @@ export default function PokemonDetailScreen() {
     );
   }
 
-  const favorite = isFavorite(pokemon.name);
+  const favorite = favoriteIds.has(pokemon.id);
   return (
     <ThemedView style={styles.screen}>
       <ScrollView
@@ -76,8 +80,8 @@ export default function PokemonDetailScreen() {
             {formatName(pokemon.name)}
           </ThemedText>
           <Image
-            source={pokemon.image}
-            contentFit="contain"
+            source={{ uri: pokemon.image }}
+            cachePolicy={"memory-disk"}
             style={styles.image}
           />
           <View style={styles.types}>
@@ -170,13 +174,7 @@ export default function PokemonDetailScreen() {
         <DetailSection title={t("evolutions")}>
           <View style={styles.evolutionList}>
             {pokemon.evolutions.map((evolution) => (
-              <PokemonCard
-                key={evolution.name}
-                pokemon={evolution}
-                onPress={() =>
-                  router.push(`/pokemon/${evolution.name}` as Href)
-                }
-              />
+              <PokemonCard key={evolution.name} pokemon={evolution} />
             ))}
           </View>
         </DetailSection>

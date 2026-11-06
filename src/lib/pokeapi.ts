@@ -102,10 +102,8 @@ async function request<T>(path: string): Promise<T> {
 }
 
 function getIdFromUrl(url: string) {
-  const match = url.match(/\/pokemon\/(\d+)\/?$/);
-  if (!match) {
-    throw new PokeApiError(`Unable to determine Pokemon id from ${url}`);
-  }
+  const match = url.match(/\/(?:pokemon|pokemon-species)\/(\d+)\/?$/);
+  if (!match) throw new PokeApiError(`Unable to determine id from ${url}`);
   return Number(match[1]);
 }
 
@@ -144,8 +142,8 @@ async function getSummary(resource: NamedApiResource): Promise<PokemonSummary> {
   return toSummary(await request<PokemonApiResponse>(`/pokemon/${resource.name}`));
 }
 
-function flattenEvolutionChain(node: EvolutionNode): string[] {
-  return [node.species.name, ...node.evolves_to.flatMap(flattenEvolutionChain)];
+function flattenEvolutionChain(node: EvolutionNode): NamedApiResource[] {
+  return [node.species, ...node.evolves_to.flatMap(flattenEvolutionChain)];
 }
 
 export async function getPokemonList(limit = 24, offset = 0): Promise<PokemonSummary[]> {
@@ -235,18 +233,18 @@ export async function getPokemonDetails(name: string): Promise<PokemonDetails> {
   const evolutionChain = await request<EvolutionChainResponse>(
     species.evolution_chain.url.replace(API_BASE_URL, ''),
   );
-  const evolutionNames = flattenEvolutionChain(evolutionChain.chain);
+  const current = toSummary(pokemon);
   const evolutions = await Promise.all(
-    evolutionNames.filter((evolutionName) => evolutionName !== pokemon.name).map((evolutionName) =>
-      getSummary({ name: evolutionName, url: `${API_BASE_URL}/pokemon/${evolutionName}` }),
+    flattenEvolutionChain(evolutionChain.chain).map((s) =>
+      s.name === pokemon.species.name ? current : getSummary(s),
     ),
   );
 
   return {
-    ...toSummary(pokemon),
+    ...current,
     abilities: pokemon.abilities.map(({ ability }) => ability.name),
     stats: pokemon.stats.map(({ base_stat, stat }) => ({ name: stat.name, value: base_stat })),
-    evolutions: [toSummary(pokemon), ...evolutions],
+    evolutions,
   };
 }
 
