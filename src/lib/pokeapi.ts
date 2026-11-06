@@ -149,20 +149,6 @@ function getImageUrl(id: number, sprites: PokemonApiResponse['sprites']) {
   );
 }
 
-function getResourceId(resource: NamedApiResource) {
-  return getIdFromUrl(resource.url);
-}
-
-function toSummaryResource(resource: NamedApiResource): PokemonSummary {
-  const id = getResourceId(resource);
-  return {
-    id,
-    name: resource.name,
-    image: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`,
-    types: [],
-  };
-}
-
 function toSummary(pokemon: PokemonApiResponse): PokemonSummary {
   return {
     id: pokemon.id,
@@ -174,6 +160,10 @@ function toSummary(pokemon: PokemonApiResponse): PokemonSummary {
 
 async function getSummary(resource: NamedApiResource): Promise<PokemonSummary> {
   return toSummary(await request<PokemonApiResponse>(`/pokemon/${resource.name}`));
+}
+
+async function getSummaries(resources: NamedApiResource[]) {
+  return Promise.all(resources.map(getSummary));
 }
 
 function flattenEvolutionChain(node: EvolutionNode): NamedApiResource[] {
@@ -188,7 +178,7 @@ async function getPokemon(name: string): Promise<PokemonApiResponse> {
 
 export async function getPokemonList(limit = 24, offset = 0): Promise<PokemonSummary[]> {
   const list = await request<PokemonListResponse>(`/pokemon?limit=${limit}&offset=${offset}`);
-  return list.results.map(toSummaryResource);
+  return getSummaries(list.results);
 }
 
 export async function getPokemonListPage(
@@ -199,7 +189,7 @@ export async function getPokemonListPage(
     `/pokemon?limit=${limit}&offset=${offset}`,
   );
   return {
-    pokemon: list.results.map(toSummaryResource),
+    pokemon: await getSummaries(list.results),
     nextOffset: list.next ? offset + limit : null,
   };
 }
@@ -213,7 +203,7 @@ export async function getPokemonByType(type: string): Promise<PokemonSummary[]> 
   const response = await request<PokemonTypeResponse>(
     `/type/${encodeURIComponent(type)}`,
   );
-  return response.pokemon.map(({ pokemon }) => toSummaryResource(pokemon));
+  return getSummaries(response.pokemon.map(({ pokemon }) => pokemon));
 }
 
 export async function searchPokemon(query: string): Promise<PokemonSummary[]> {
@@ -225,7 +215,7 @@ export async function searchPokemon(query: string): Promise<PokemonSummary[]> {
   const resources = (await getPokemonNameIndex())
     .filter(({ name }) => name.includes(normalizedQuery))
     .slice(0, 40);
-  return resources.map(toSummaryResource);
+  return getSummaries(resources);
 }
 
 export async function searchPokemonNames(
