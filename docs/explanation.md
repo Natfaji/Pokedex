@@ -75,10 +75,6 @@ Battle-engine tests are in
 
 ## Bonus work
 
-- The PokeAPI response cache in
-  [`src/lib/pokeapi.ts`](../src/lib/pokeapi.ts#L1) stores successful responses
-  in AsyncStorage and uses the last successful response when the API is
-  unavailable.
 - Accessibility labels and disabled states are applied to interactive controls,
   including search, favorites, language selection, battle moves and retry
   actions.
