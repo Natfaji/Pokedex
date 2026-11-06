@@ -1,11 +1,10 @@
 import * as Clipboard from "expo-clipboard";
 import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
-  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -43,7 +42,19 @@ export default function PokemonDetailScreen() {
   const [activeSection, setActiveSection] = useState<
     "about" | "stats" | "evolutions"
   >("about");
+  const [copyFeedback, setCopyFeedback] = useState<"success" | "error" | null>(
+    null,
+  );
   const { data: pokemon, isLoading, isError } = usePokemonDetails(name);
+
+  useEffect(() => {
+    if (!copyFeedback) {
+      return;
+    }
+
+    const timeout = setTimeout(() => setCopyFeedback(null), 3000);
+    return () => clearTimeout(timeout);
+  }, [copyFeedback]);
 
   if (isLoading) {
     return (
@@ -77,9 +88,9 @@ export default function PokemonDetailScreen() {
   const copyPokemonLink = async () => {
     try {
       await Clipboard.setStringAsync(pokemonUrl);
-      Alert.alert(t("linkCopied"));
+      setCopyFeedback("success");
     } catch {
-      Alert.alert(t("copyError"));
+      setCopyFeedback("error");
     }
   };
   const handleShare = async () => {
@@ -103,7 +114,7 @@ export default function PokemonDetailScreen() {
       if (Platform.OS === "web") {
         await copyPokemonLink();
       } else {
-        Alert.alert(t("shareError"));
+        setCopyFeedback("error");
       }
     }
   };
@@ -256,6 +267,21 @@ export default function PokemonDetailScreen() {
           </DetailSection>
         )}
       </ScrollView>
+      {copyFeedback && (
+        <View
+          accessibilityLiveRegion="polite"
+          accessibilityRole="alert"
+          pointerEvents="none"
+          style={[
+            styles.copyPopup,
+            copyFeedback === "error" && styles.copyPopupError,
+          ]}
+        >
+          <ThemedText style={styles.copyPopupText}>
+            {copyFeedback === "success" ? t("linkCopied") : t("copyError")}
+          </ThemedText>
+        </View>
+      )}
     </ThemedView>
   );
 }
@@ -279,6 +305,24 @@ function DetailSection({
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  copyPopup: {
+    position: "absolute",
+    alignSelf: "center",
+    bottom: Spacing.four,
+    maxWidth: "90%",
+    borderRadius: 10,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    backgroundColor: "#15803D",
+  },
+  copyPopupError: {
+    backgroundColor: "#B91C1C",
+  },
+  copyPopupText: {
+    color: Palette.white,
+    fontWeight: "700",
+    textAlign: "center",
+  },
   state: {
     flex: 1,
     alignItems: "center",
