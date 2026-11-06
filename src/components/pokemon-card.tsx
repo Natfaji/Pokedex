@@ -9,7 +9,7 @@ import {
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Palette, Spacing } from "@/constants/theme";
+import { getPokemonTypeColor, Palette, Spacing } from "@/constants/theme";
 import type { PokemonSummary } from "@/lib/pokeapi";
 import { Image } from "expo-image";
 import React from "react";
@@ -124,7 +124,14 @@ function PokemonCard({
           <ThemedText type="smallBold">{name}</ThemedText>
           <View style={styles.types}>
             {types.map(({ name: typeName, label }) => (
-              <ThemedText key={typeName} type="small" themeColor="textSecondary">
+              <ThemedText
+                key={typeName}
+                type="small"
+                style={[
+                  styles.typeLabel,
+                  { backgroundColor: getPokemonTypeColor(typeName) },
+                ]}
+              >
                 {label}
               </ThemedText>
             ))}
@@ -209,6 +216,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: Spacing.two,
+  },
+  typeLabel: {
+    color: Palette.white,
+    borderRadius: 999,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.half,
+    overflow: "hidden",
   },
   favoriteButton: {
     position: "absolute",
