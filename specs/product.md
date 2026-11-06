@@ -28,18 +28,28 @@ The first version of this application will include:
 - A favorites feature to save and manage favorite Pokemon.
 - A responsive design.
 - Localization (i18n) with Dutch and English in the first version.
+- A battle simulator extension with setup, real-rules battles, and persistent
+  battle history.
 
 ## Technical choices
 
 - **Persistent data:** favorites are stored in SQLite so they remain available after an app restart. The alternative was AsyncStorage, but SQLite gives the saved collection a structured schema.
 - **Native feature:** the detail screen uses the React Native share sheet. The alternative was haptics, but sharing a Pokemon is more useful to this app's users and works on both mobile platforms.
 - **Server state:** TanStack Query caches PokeAPI responses and loads the list in pages of 24. The alternative was manual effects and component state, but query caching avoids duplicate requests while navigating.
+- **Battle route:** Battle is an extension of the Pokédex rather than a replacement
+  for it. The battle screens use their own game-focused visual style while
+  reusing shared theme tokens and controls.
+- **Battle persistence:** Completed battle results are stored in SQLite and
+  displayed in a dedicated History tab. The alternative was storing only the
+  current battle in memory, which would lose the result after a restart.
 
 ## Out of scope for the first version
 
 - Advanced filtering and sorting options.
 - User-generated content (e.g., reviews, ratings).
 - Social media integration.
+- Online multiplayer, teams, abilities, items, status effects, weather, and
+  special move effects in battles.
 
 ## Future scope
 

@@ -20,11 +20,6 @@ export type PokemonNameResult = {
   url: string;
 };
 
-const POKEMON_INDEX_CACHE_TIME = 24 * 60 * 60 * 1000;
-let pokemonIndexCache: PokemonNameResult[] | null = null;
-let pokemonIndexFetchedAt = 0;
-let pokemonIndexRequest: Promise<PokemonNameResult[]> | null = null;
-
 export type PokemonStat = {
   name: string;
   value: number;
@@ -34,6 +29,27 @@ export type PokemonDetails = PokemonSummary & {
   abilities: string[];
   stats: PokemonStat[];
   evolutions: PokemonSummary[];
+};
+
+export type BattleMove = {
+  name: string;
+  power: number | null;
+  type: string;
+  accuracy: number | null;
+  damageClass: 'physical' | 'special' | 'status';
+};
+
+export type BattlePokemon = PokemonSummary & {
+  level: 50;
+  stats: Record<'hp' | 'attack' | 'defense' | 'special-attack' | 'special-defense' | 'speed', number>;
+  moves: BattleMove[];
+};
+
+export type TypeDamageRelations = {
+  attacking: string;
+  doubleDamageTo: string[];
+  halfDamageTo: string[];
+  noDamageTo: string[];
 };
 
 export type PokemonListPage = {
@@ -67,6 +83,7 @@ type PokemonApiResponse = {
   abilities: { ability: NamedApiResource }[];
   stats: { base_stat: number; stat: NamedApiResource }[];
   species: NamedApiResource;
+  moves: { move: NamedApiResource }[];
 };
 
 type EvolutionNode = {
@@ -80,6 +97,23 @@ type EvolutionChainResponse = {
 
 type PokemonTypeResponse = {
   pokemon: { pokemon: NamedApiResource }[];
+};
+
+type MoveApiResponse = {
+  name: string;
+  power: number | null;
+  accuracy: number | null;
+  damage_class: NamedApiResource;
+  type: NamedApiResource;
+};
+
+type TypeDamageRelationsResponse = {
+  name: string;
+  damage_relations: {
+    double_damage_to: NamedApiResource[];
+    half_damage_to: NamedApiResource[];
+    no_damage_to: NamedApiResource[];
+  };
 };
 
 type PokemonTypeListResponse = {
@@ -146,6 +180,12 @@ function flattenEvolutionChain(node: EvolutionNode): NamedApiResource[] {
   return [node.species, ...node.evolves_to.flatMap(flattenEvolutionChain)];
 }
 
+async function getPokemon(name: string): Promise<PokemonApiResponse> {
+  return request<PokemonApiResponse>(
+    `/pokemon/${encodeURIComponent(name)}`,
+  );
+}
+
 export async function getPokemonList(limit = 24, offset = 0): Promise<PokemonSummary[]> {
   const list = await request<PokemonListResponse>(`/pokemon?limit=${limit}&offset=${offset}`);
   return list.results.map(toSummaryResource);
@@ -203,30 +243,13 @@ export async function searchPokemonNames(
 }
 
 export async function getPokemonNameIndex(): Promise<PokemonNameResult[]> {
-  if (
-    pokemonIndexCache &&
-    Date.now() - pokemonIndexFetchedAt < POKEMON_INDEX_CACHE_TIME
-  ) {
-    return pokemonIndexCache;
-  }
+  const list = await request<PokemonListResponse>('/pokemon?limit=2000');
 
-  if (!pokemonIndexRequest) {
-    pokemonIndexRequest = request<PokemonListResponse>('/pokemon?limit=2000')
-      .then((list) => {
-        pokemonIndexCache = list.results.map(({ name, url }) => ({ name, url }));
-        pokemonIndexFetchedAt = Date.now();
-        return pokemonIndexCache;
-      })
-      .finally(() => {
-        pokemonIndexRequest = null;
-      });
-  }
-
-  return pokemonIndexRequest;
+  return list.results.map(({ name, url }) => ({ name, url }));
 }
 
 export async function getPokemonDetails(name: string): Promise<PokemonDetails> {
-  const pokemon = await request<PokemonApiResponse>(`/pokemon/${encodeURIComponent(name)}`);
+  const pokemon = await getPokemon(name);
   const species = await request<{ evolution_chain: NamedApiResource }>(
     pokemon.species.url.replace(API_BASE_URL, ''),
   );
@@ -245,6 +268,79 @@ export async function getPokemonDetails(name: string): Promise<PokemonDetails> {
     abilities: pokemon.abilities.map(({ ability }) => ability.name),
     stats: pokemon.stats.map(({ base_stat, stat }) => ({ name: stat.name, value: base_stat })),
     evolutions,
+  };
+}
+
+export async function getBattlePokemon(name: string): Promise<BattlePokemon> {
+  const pokemon = await getPokemon(name);
+  const moves = await Promise.all(
+    pokemon.moves.slice(0, 4).map(async ({ move }) => {
+      const details = await request<MoveApiResponse>(
+        move.url.replace(API_BASE_URL, ''),
+      );
+      return {
+        name: details.name,
+        power: details.power,
+        type: details.type.name,
+        accuracy: details.accuracy,
+        damageClass:
+          details.damage_class.name === 'physical' ||
+            details.damage_class.name === 'special'
+            ? details.damage_class.name
+            : 'status',
+      } satisfies BattleMove;
+    }),
+  );
+  const stats = Object.fromEntries(
+    pokemon.stats
+      .filter(({ stat }) =>
+        ['hp', 'attack', 'defense', 'special-attack', 'special-defense', 'speed'].includes(
+          stat.name,
+        ),
+      )
+      .map(({ stat, base_stat }) => [stat.name, base_stat]),
+  ) as BattlePokemon['stats'];
+
+  return {
+    ...toSummary(pokemon),
+    level: 50,
+    stats,
+    moves:
+      moves.length > 0
+        ? moves.map((move) =>
+          move.power === null
+            ? {
+              name: 'struggle',
+              power: 50,
+              type: 'normal',
+              accuracy: null,
+              damageClass: 'physical',
+            }
+            : move,
+        )
+        : [
+          {
+            name: 'struggle',
+            power: 50,
+            type: 'normal',
+            accuracy: null,
+            damageClass: 'physical',
+          },
+        ],
+  };
+}
+
+export async function getTypeDamageRelations(
+  type: string,
+): Promise<TypeDamageRelations> {
+  const response = await request<TypeDamageRelationsResponse>(
+    `/type/${encodeURIComponent(type)}`,
+  );
+  return {
+    attacking: response.name,
+    doubleDamageTo: response.damage_relations.double_damage_to.map(({ name }) => name),
+    halfDamageTo: response.damage_relations.half_damage_to.map(({ name }) => name),
+    noDamageTo: response.damage_relations.no_damage_to.map(({ name }) => name),
   };
 }
 

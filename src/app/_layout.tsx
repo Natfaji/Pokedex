@@ -30,6 +30,8 @@ export default function TabLayout() {
               <Stack.Screen name="pokemon/[name]" />
               <Stack.Screen name="types/[type]" />
               <Stack.Screen name="compare" />
+              <Stack.Screen name="battle" />
+              <Stack.Screen name="battle/fight" />
             </Stack>
           </ThemeProvider>
         </FavoritesProvider>
